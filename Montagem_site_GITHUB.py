@@ -158,7 +158,7 @@ if st.session_state["atualizar"]:
             st.metric("🧾 Total de Boletos em Aberto", total_boletos)
 
         st.markdown("### 📊 Valor a Receber por Processo (Boletos em Aberto)")
-        valores_por_processo = df_aberto.groupby("Processo")["Valor"].sum().sort_values(ascending=False)
+        valores_por_processo = df_aberto.groupby("Processo")["Valor"].sum().sort_values(ascending=True)
         st.bar_chart(valores_por_processo)
 
         st.markdown("### 📋 Dados Detalhados (Boletos em Aberto)")
