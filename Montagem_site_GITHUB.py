@@ -68,8 +68,62 @@ def coletar_dados(access_token, nome_empresa):
 
 # --- CONFIGURAÇÃO DO STREAMLIT ---
 st.set_page_config(page_title="Dashboard de Boletos", layout="wide")
+st.markdown(st.markdown("""
+    <style>
+    /* Fundo da página */
+    body {
+        background-color: #0f1117;
+        color: #f0f2f6;
+    }
+
+    /* Cabeçalhos */
+    h1, h2, h3, h4 {
+        color: #00c7e6;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Métricas */
+    div[data-testid="metric-container"] {
+        background-color: #1f2937;
+        border-radius: 10px;
+        padding: 10px;
+        margin: 5px 0;
+        color: white;
+    }
+
+    /* Dataframe */
+    .stDataFrame {
+        background-color: #1c1f26;
+        color: white;
+        border-radius: 10px;
+    }
+
+    /* Botões */
+    button[kind="primary"] {
+        background-color: #00c7e6;
+        color: black;
+        border-radius: 10px;
+        font-weight: bold;
+    }
+
+    /* Spinner */
+    .stSpinner {
+        color: #00c7e6;
+    }
+
+    /* Barra de rolagem */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: #00c7e6;
+        border-radius: 10px;
+    }
+
+    </style>
+""", unsafe_allow_html=True))
+
 st.title("📊 Dashboard de Acompanhamento de Boletos")
-st.markdown("---")
 
 # Lista de empresas com token e nome
 empresas = []
