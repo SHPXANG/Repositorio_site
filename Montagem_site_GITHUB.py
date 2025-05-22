@@ -3,21 +3,73 @@ import pandas as pd
 import requests
 import re
 
+# --- CONFIGURAÇÃO DO STREAMLIT ---
+st.set_page_config(page_title="Dashboard de Boletos", layout="wide")
+
+# --- ESTILO PERSONALIZADO (CSS) ---
+st.markdown("""
+    <style>
+    .main {
+        background-color: #0e1117;
+        color: #f5f6fa;
+    }
+
+    h1, h2, h3, h4 {
+        color: #00c7e6;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    div[data-testid="metric-container"] {
+        background-color: #1e293b;
+        padding: 20px;
+        border-radius: 10px;
+        color: #ffffff;
+        border: 1px solid #00c7e6;
+        margin: 5px 0;
+    }
+
+    button {
+        background-color: #00c7e6 !important;
+        color: black !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+    }
+
+    div[data-testid="metric-container"] > label {
+        color: #cbd5e1;
+    }
+
+    .stDataFrame {
+        background-color: #1e1e2f;
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background-color: #00c7e6;
+        border-radius: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("📊 Dashboard de Acompanhamento de Boletos")
+st.markdown("---")
+
 # Função segura para converter valores
 def converter_valor(valor):
     try:
         if isinstance(valor, (int, float)):
             return float(valor)
-
         valor_str = str(valor).strip()
         valor_str = re.sub(r"[^\d,\.]", "", valor_str)
-
         if ',' in valor_str and '.' in valor_str:
-            # Ex: 1.234,56 → 1234.56
             valor_str = valor_str.replace('.', '').replace(',', '.')
         elif ',' in valor_str:
             valor_str = valor_str.replace(',', '.')
-
         return float(valor_str)
     except Exception as e:
         print(f"Erro ao converter valor: {valor} -> {e}")
@@ -50,7 +102,6 @@ def coletar_dados(access_token, nome_empresa):
 
         for conta in contas:
             valor = converter_valor(conta.get("valor", 0))
-
             todos_os_dados.append({
                 "Número Título": conta.get("numero_titulo", ""),
                 "Número Documento": conta.get("numero_fatura", ""),
@@ -62,121 +113,58 @@ def coletar_dados(access_token, nome_empresa):
                 "Processo": conta.get("processo", {}).get("codigo", "")
             })
 
-        pagina += 1  # Vai para a próxima página
+        pagina += 1
 
     return pd.DataFrame(todos_os_dados)
 
-# --- CONFIGURAÇÃO DO STREAMLIT ---
-st.set_page_config(page_title="Dashboard de Boletos", layout="wide")
-st.markdown(st.markdown("""
-    <style>
-    /* Fundo da página */
-    body {
-        background-color: #0f1117;
-        color: #f0f2f6;
-    }
-
-    /* Cabeçalhos */
-    h1, h2, h3, h4 {
-        color: #00c7e6;
-        font-family: 'Segoe UI', sans-serif;
-    }
-
-    /* Métricas */
-    div[data-testid="metric-container"] {
-        background-color: #1f2937;
-        border-radius: 10px;
-        padding: 10px;
-        margin: 5px 0;
-        color: white;
-    }
-
-    /* Dataframe */
-    .stDataFrame {
-        background-color: #1c1f26;
-        color: white;
-        border-radius: 10px;
-    }
-
-    /* Botões */
-    button[kind="primary"] {
-        background-color: #00c7e6;
-        color: black;
-        border-radius: 10px;
-        font-weight: bold;
-    }
-
-    /* Spinner */
-    .stSpinner {
-        color: #00c7e6;
-    }
-
-    /* Barra de rolagem */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    ::-webkit-scrollbar-thumb {
-        background-color: #00c7e6;
-        border-radius: 10px;
-    }
-
-    </style>
-""", unsafe_allow_html=True))
-
-st.title("📊 Dashboard de Acompanhamento de Boletos")
-
-# Lista de empresas com token e nome
+# Lista de empresas (INSERIR SEUS DADOS AQUI)
 empresas = []
 empresas = st.secrets["empresas"]
 
-def carregar_dados():
-    dados_empresas = {}
+# Botão para atualizar
+if st.button("🔄 Atualizar Dados"):
+    st.session_state["atualizar"] = True
+
+# Executa coleta de dados no carregamento ou após clique
+if "atualizar" not in st.session_state:
+    st.session_state["atualizar"] = True
+
+if st.session_state["atualizar"]:
     for empresa in empresas:
         nome = empresa["nome"]
         token = empresa["token"]
+
+        st.header(f"🏢 {nome}")
+
         with st.spinner(f"Coletando dados da empresa {nome}..."):
             df = coletar_dados(token, nome)
-        dados_empresas[nome] = df
-    return dados_empresas
 
-# Inicializa session_state para os dados se não existir
-if "dados_empresas" not in st.session_state:
-    st.session_state.dados_empresas = carregar_dados()
+        if df.empty:
+            st.warning("Nenhum dado encontrado.")
+            continue
 
-# Botão para atualizar dados
-if st.button("🔄 Atualizar"):
-    st.session_state.dados_empresas = carregar_dados()
-    
-# --- DASHBOARD POR EMPRESA ---
-for nome, df in st.session_state.dados_empresas.items():
-    st.header(f"🏢 {nome}")
+        df_aberto = df[df["Data Pagamento"].isna()]
+        if df_aberto.empty:
+            st.info("Nenhum boleto em aberto encontrado.")
+            continue
 
-    if df.empty:
-        st.warning("Nenhum dado encontrado.")
-        continue
+        total_valor = df_aberto['Valor'].sum()
+        total_boletos = df_aberto.shape[0]
 
-    # Filtrar apenas boletos em aberto (sem data de pagamento)
-    df_aberto = df[df["Data Pagamento"].isna()]
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("💰 Total a Receber (em aberto)", f"R$ {total_valor:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
+        with col2:
+            st.metric("🧾 Total de Boletos em Aberto", total_boletos)
 
-    if df_aberto.empty:
-        st.info("Nenhum boleto em aberto encontrado.")
-        continue
+        st.markdown("### 📊 Valor a Receber por Processo (Boletos em Aberto)")
+        valores_por_processo = df_aberto.groupby("Processo")["Valor"].sum().sort_values(ascending=False)
+        st.bar_chart(valores_por_processo)
 
-    # Indicadores totais (somente boletos em aberto)
-    total_valor = df_aberto['Valor'].sum()
-    total_boletos = df_aberto.shape[0]
+        st.markdown("### 📋 Dados Detalhados (Boletos em Aberto)")
+        st.dataframe(df_aberto)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("💰 Total a Receber (em aberto)", f"R$ {total_valor:,.2f}".replace('.', '#').replace(',', '.').replace('#', ','))
-    with col2:
-        st.metric("🧾 Total de Boletos em Aberto", total_boletos)
+        st.markdown("---")
 
-    st.markdown("### 📊 Valor a Receber por Processo (Boletos em Aberto)")
-    valores_por_processo = df_aberto.groupby("Processo")["Valor"].sum().sort_values(ascending=False)
-    st.bar_chart(valores_por_processo)
-
-    st.markdown("### 📋 Dados Detalhados (Boletos em Aberto)")
-    st.dataframe(df_aberto)
-
-    st.markdown("---")
+    # Limpa o estado para não recarregar sempre
+    st.session_state["atualizar"] = False
