@@ -73,6 +73,7 @@ st.markdown("---")
 
 # Lista de empresas com token e nome
 empresas = []
+empresas = st.secrets["empresas"]
 
 def carregar_dados():
     dados_empresas = {}
