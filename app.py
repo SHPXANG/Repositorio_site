@@ -235,6 +235,57 @@ st.markdown("""
 
 
 # ========================
+# AUTENTICAÇÃO (LOGIN)
+# ========================
+def tela_login():
+    """Exibe tela de login e retorna True se autenticado."""
+    if "autenticado" not in st.session_state:
+        st.session_state.autenticado = False
+
+    if st.session_state.autenticado:
+        return True
+
+    st.markdown("""
+    <div style="display:flex; justify-content:center; align-items:center; min-height:70vh;">
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_left, col_center, col_right = st.columns([1, 1.5, 1])
+    with col_center:
+        st.markdown("""
+        <div style="text-align:center; margin-bottom:24px;">
+            <h1 style="font-size:2rem; font-weight:800;
+                       background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+                       -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                🔐 Login
+            </h1>
+            <p style="color:rgba(255,255,255,0.45); font-size:0.9rem;">Dashboard Financeiro — Contas a Receber</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.form("login_form"):
+            usuario = st.text_input("👤 Usuário")
+            senha = st.text_input("🔑 Senha", type="password")
+            submitted = st.form_submit_button("Entrar", use_container_width=True)
+
+            if submitted:
+                user_ok = st.secrets["APP_USER"]
+                pass_ok = st.secrets["APP_PASSWORD"]
+                if usuario == user_ok and senha == pass_ok:
+                    st.session_state.autenticado = True
+                    st.rerun()
+                else:
+                    st.error("❌ Usuário ou senha incorretos.")
+
+    return False
+
+
+# Verificar login antes de tudo
+if not tela_login():
+    st.stop()
+
+
+# ========================
 # EMPRESAS (tokens via Streamlit Secrets)
 # ========================
 EMPRESAS = [
@@ -285,17 +336,11 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Filtro por período de vencimento
-    st.markdown("### 📅 Filtro por Período")
-    st.caption("Filtra pelo **vencimento** dos boletos")
+    # Botão logout
+    if st.button("🚪 Sair", use_container_width=True):
+        st.session_state.autenticado = False
+        st.rerun()
 
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        data_inicio = st.date_input("De", value=date(date.today().year, 1, 1))
-    with col_d2:
-        data_fim = st.date_input("Até", value=date.today())
-
-    st.markdown("---")
     st.caption("Desenvolvido com ❤️ usando Streamlit")
 
 
@@ -319,12 +364,8 @@ df_aberto = df[df["Data Pagamento_dt"].isna()].copy()
 if empresa_selecionada != "Todas":
     df_aberto = df_aberto[df_aberto["Empresa"] == empresa_selecionada]
 
-# Filtrar por período
-mask_periodo = (
-    (df_aberto["Vencimento_dt"] >= pd.Timestamp(data_inicio)) &
-    (df_aberto["Vencimento_dt"] <= pd.Timestamp(data_fim))
-)
-df_filtrado = df_aberto[mask_periodo].copy()
+# Sem filtro de data — mostra todos em aberto
+df_filtrado = df_aberto.copy()
 
 
 # ========================
